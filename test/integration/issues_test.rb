@@ -33,7 +33,7 @@ class IssuesTest < Redmine::IntegrationTest
            :enumerations,
            :custom_fields,
            :custom_values,
-           :custom_fields_trackers, :custom_fields_projects,
+           :custom_fields_trackers,
            :attachments
 
   # create an issue
@@ -321,16 +321,5 @@ class IssuesTest < Redmine::IntegrationTest
       get '/watchers/watch?object_type=issue&object_id=1'
       assert_response 404
     end
-  end
-
-  def test_invalid_operators_should_render_404
-    get '/projects/ecookbook/issues', :params => {
-      'set_filter' => '1',
-      'f' => ['status_id', 'cf_9'],
-      'op' => {'status_id' => 'o', 'cf_9' => '=6546546546'},
-      'v' => {'cf_9' => ['2021-05-25']}
-    }
-
-    assert_response 404
   end
 end

@@ -29,11 +29,6 @@ begin
 rescue LoadError
   # Redcarpet is not available
 end
-begin
-  require 'commonmarker' unless Object.const_defined?(:CommonMarker)
-rescue LoadError
-  # CommonMarker is not available
-end
 
 require 'redmine/acts/positioned'
 
@@ -52,7 +47,6 @@ require 'redmine/platform'
 require 'redmine/project_jump_box'
 require 'redmine/mime_type'
 require 'redmine/search'
-require 'redmine/sort_criteria'
 require 'redmine/syntax_highlighting'
 require 'redmine/thumbnail'
 require 'redmine/unified_diff'
@@ -90,7 +84,7 @@ Redmine::AccessControl.map do |map|
   map.permission :add_project, {:projects => [:new, :create]}, :require => :loggedin
   map.permission :edit_project, {:projects => [:settings, :edit, :update]}, :require => :member
   map.permission :close_project, {:projects => [:close, :reopen]}, :require => :member, :read => true
-  map.permission :delete_project, {:projects => :destroy}, :require => :member, :read => true
+  map.permission :delete_project, {:projects => :destroy}, :require => :member
   map.permission :select_project_modules, {:projects => :modules}, :require => :member
   map.permission :view_members, {:members => [:index, :show]}, :public => true, :read => true
   map.permission :manage_members, {:projects => :settings, :members => [:index, :show, :new, :create, :edit, :update, :destroy, :autocomplete]}, :require => :member
@@ -175,11 +169,8 @@ Redmine::AccessControl.map do |map|
     map.permission :rename_wiki_pages, {:wiki => :rename}, :require => :member
     map.permission :delete_wiki_pages, {:wiki => [:destroy, :destroy_version]}, :require => :member
     map.permission :delete_wiki_pages_attachments, {}
-    map.permission :view_wiki_page_watchers, {}, :read => true
-    map.permission :add_wiki_page_watchers, {:watchers => [:new, :create, :autocomplete_for_user]}
-    map.permission :delete_wiki_page_watchers, {:watchers => :destroy}
     map.permission :protect_wiki_pages, {:wiki => :protect}, :require => :member
-    map.permission :manage_wiki, {:wikis => :destroy, :wiki => :rename}, :require => :member
+    map.permission :manage_wiki, {:wikis => [:edit, :destroy], :wiki => :rename}, :require => :member
   end
 
   map.project_module :repository do |map|
@@ -429,7 +420,7 @@ Redmine::Activity.map do |activity|
   activity.register :news
   activity.register :documents, :class_name => %w(Document Attachment)
   activity.register :files, :class_name => 'Attachment'
-  activity.register :wiki_edits, :class_name => 'WikiContentVersion', :default => false
+  activity.register :wiki_edits, :class_name => 'WikiContent::Version', :default => false
   activity.register :messages, :default => false
   activity.register :time_entries, :default => false
 end
@@ -447,9 +438,6 @@ end
 Redmine::WikiFormatting.map do |format|
   format.register :textile
   format.register :markdown if Object.const_defined?(:Redcarpet)
-  if Object.const_defined?(:CommonMarker)
-    format.register :common_mark, label: 'CommonMark Markdown (GitHub Flavored) - experimental'
-  end
 end
 
 ActionView::Template.register_template_handler :rsb, Redmine::Views::ApiTemplateHandler

@@ -1,8 +1,8 @@
 inherit_from: .rubocop_todo.yml
 
 AllCops:
-  TargetRubyVersion: 2.5
-  TargetRailsVersion: 6.1
+  TargetRubyVersion: 2.4
+  TargetRailsVersion: 5.2
 
   NewCops: enable
 
@@ -117,9 +117,6 @@ Rails/BulkChangeTable:
   Exclude:
     - 'db/migrate/20120714122200_add_workflows_rule_fields.rb'
     - 'db/migrate/20131214094309_remove_custom_fields_min_max_length_default_values.rb'
-
-Rails/EnvironmentVariableAccess:
-  Enabled: false
 
 Rails/HelperInstanceVariable:
   Enabled: false

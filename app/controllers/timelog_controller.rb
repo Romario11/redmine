@@ -32,7 +32,6 @@ class TimelogController < ApplicationController
   accept_api_auth :index, :show, :create, :update, :destroy
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
-  rescue_from Query::QueryError, :with => :query_error
 
   helper :issues
   include TimelogHelper
@@ -76,7 +75,7 @@ class TimelogController < ApplicationController
     retrieve_time_entry_query
     scope = time_entry_scope
 
-    @report = Redmine::Helpers::TimeReport.new(@project, params[:criteria], params[:columns], scope)
+    @report = Redmine::Helpers::TimeReport.new(@project, @issue, params[:criteria], params[:columns], scope)
 
     respond_to do |format|
       format.html {render :layout => !request.xhr?}
@@ -303,10 +302,5 @@ class TimelogController < ApplicationController
 
   def retrieve_time_entry_query
     retrieve_query(TimeEntryQuery, false, :defaults => @default_columns_names)
-  end
-
-  def query_error(exception)
-    session.delete(:time_entry_query)
-    super
   end
 end

@@ -4,10 +4,7 @@
 <% end %>
 </div>
 
-<p>
-  <strong><%=l(:label_related_issues)%></strong>
-  <%= render_relations_stats(@issue, @relations) if @relations.present? %>
-</p>
+<p><strong><%=l(:label_related_issues)%></strong></p>
 
 <% if @relations.present? %>
 <%= form_tag({}, :data => {:cm_url => issues_context_menu_path}) do %>

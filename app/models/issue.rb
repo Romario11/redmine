@@ -209,11 +209,6 @@ class Issue < ActiveRecord::Base
     user_tracker_permission?(user, :delete_issues)
   end
 
-  # Overrides Redmine::Acts::Attachable::InstanceMethods#attachments_deletable?
-  def attachments_deletable?(user=User.current)
-    attributes_editable?(user)
-  end
-
   def initialize(attributes=nil, *args)
     super
     if new_record?
@@ -224,7 +219,7 @@ class Issue < ActiveRecord::Base
   end
 
   def create_or_update(*args)
-    super()
+    super
   ensure
     @status_was = nil
   end

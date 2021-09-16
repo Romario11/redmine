@@ -125,7 +125,9 @@ module Redmine
 
         def detach_saved_attachments
           saved_attachments.each do |attachment|
-            attachment.reload
+            # TODO: use #reload instead, after upgrading to Rails 5
+            # (after_rollback is called when running transactional tests in Rails 4)
+            attachment.container = nil
           end
         end
 

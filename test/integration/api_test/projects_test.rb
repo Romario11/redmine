@@ -172,7 +172,7 @@ class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
 
     get '/projects/1.xml?include=trackers', :headers => credentials(user.login)
     assert_response :success
-    assert_equal 'application/xml', @response.media_type
+    assert_equal 'application/xml', @response.content_type
 
     assert_select 'trackers[type=array]' do
       assert_select 'tracker[id="1"]', :count => 1
@@ -355,39 +355,5 @@ class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
     assert_response :no_content
     assert_equal '', @response.body
     assert_nil Project.find_by_id(2)
-  end
-
-  test "PUT /projects/:id/archive.xml should archive project" do
-    put '/projects/1/archive.xml', :headers => credentials('admin')
-    assert_response :no_content
-    assert_equal '', @response.body
-    assert p = Project.find(1)
-    assert_not p.active?
-  end
-
-  test "PUT /projects/:id/unarchive.xml should unarchive project" do
-    Project.find(1).update_column :status, Project::STATUS_ARCHIVED
-    put '/projects/1/unarchive.xml', :headers => credentials('admin')
-    assert_response :no_content
-    assert_equal '', @response.body
-    assert p = Project.find_by_id(2)
-    assert p.active?
-  end
-
-  test "PUT /projects/:id/close.xml should close project" do
-    put '/projects/1/close.xml', :headers => credentials('admin')
-    assert_response :no_content
-    assert_equal '', @response.body
-    assert p = Project.find(1)
-    assert p.closed?
-  end
-
-  test "PUT /projects/:id/reopen.xml should reopen project" do
-    Project.find(1).update_column :status, Project::STATUS_CLOSED
-    put '/projects/1/reopen.xml', :headers => credentials('admin')
-    assert_response :no_content
-    assert_equal '', @response.body
-    assert p = Project.find(1)
-    assert p.active?
   end
 end

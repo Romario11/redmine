@@ -245,7 +245,7 @@ class ProjectTest < ActiveSupport::TestCase
   def test_destroy_should_destroy_subtasks
     issues =
       (0..2).to_a.map do
-        Issue.generate!(:project_id => 1, :tracker_id => 1,
+        Issue.create!(:project_id => 1, :tracker_id => 1,
                       :author_id => 1, :subject => 'test')
       end
     issues[0].update! :parent_issue_id => issues[1].id
@@ -287,7 +287,7 @@ class ProjectTest < ActiveSupport::TestCase
     assert_equal 0, Wiki.count
     assert_equal 0, WikiPage.count
     assert_equal 0, WikiContent.count
-    assert_equal 0, WikiContentVersion.count
+    assert_equal 0, WikiContent::Version.count
     assert_equal 0, Project.connection.select_all("SELECT * FROM projects_trackers").count
     assert_equal 0, Project.connection.select_all("SELECT * FROM custom_fields_projects").count
     assert_equal 0, CustomValue.where(:customized_type => ['Project', 'Issue', 'TimeEntry', 'Version']).count

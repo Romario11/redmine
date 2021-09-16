@@ -843,7 +843,7 @@ class IssuesControllerTest < Redmine::ControllerTest
     get(:index, :params => {:format => 'csv'})
     assert_response :success
 
-    assert_equal 'text/csv; header=present', @response.media_type
+    assert_equal 'text/csv', @response.media_type
     assert response.body.starts_with?("#,")
     lines = response.body.chomp.split("\n")
     # default columns + id and project
@@ -859,7 +859,7 @@ class IssuesControllerTest < Redmine::ControllerTest
       }
     )
     assert_response :success
-    assert_equal 'text/csv; header=present', @response.media_type
+    assert_equal 'text/csv', @response.media_type
   end
 
   def test_index_csv_without_any_filters
@@ -894,7 +894,7 @@ class IssuesControllerTest < Redmine::ControllerTest
       )
       assert_response :success
     end
-    assert_equal 'text/csv; header=present', response.media_type
+    assert_equal 'text/csv', response.media_type
     headers = response.body.chomp.split("\n").first.split(',')
     assert_include 'Description', headers
     assert_include 'test_index_csv_with_description', response.body
@@ -922,7 +922,7 @@ class IssuesControllerTest < Redmine::ControllerTest
       }
     )
     assert_response :success
-    assert_equal 'text/csv; header=present', @response.media_type
+    assert_equal 'text/csv', @response.media_type
     lines = @response.body.chomp.split("\n")
     assert_include "#{issue.id},#{issue.subject},7.33", lines
   end
@@ -937,7 +937,7 @@ class IssuesControllerTest < Redmine::ControllerTest
     )
     assert_response :success
 
-    assert_equal 'text/csv; header=present', @response.media_type
+    assert_equal 'text/csv', @response.media_type
     assert_match /\A#,/, response.body
     lines = response.body.chomp.split("\n")
     assert_equal IssueQuery.new.available_inline_columns.size, lines[0].split(',').size
@@ -1035,7 +1035,7 @@ class IssuesControllerTest < Redmine::ControllerTest
           :format => 'csv'
         }
       )
-      assert_equal 'text/csv; header=present', @response.media_type
+      assert_equal 'text/csv', @response.media_type
       lines = @response.body.chomp.split("\n")
       header = lines[0]
       status = (+"\xaa\xac\xbaA").force_encoding('Big5')
@@ -1058,7 +1058,7 @@ class IssuesControllerTest < Redmine::ControllerTest
           :set_filter => 1
         }
       )
-      assert_equal 'text/csv; header=present', @response.media_type
+      assert_equal 'text/csv', @response.media_type
       lines = @response.body.chomp.split("\n")
       header = lines[0]
       issue_line = lines.find {|l| l =~ /^#{issue.id},/}
@@ -1084,7 +1084,7 @@ class IssuesControllerTest < Redmine::ControllerTest
           :set_filter => 1
         }
       )
-      assert_equal 'text/csv; header=present', @response.media_type
+      assert_equal 'text/csv', @response.media_type
       lines = @response.body.chomp.split("\n")
       assert_include "#{issue.id},1234.50,#{str1}", lines
     end
@@ -1104,7 +1104,7 @@ class IssuesControllerTest < Redmine::ControllerTest
           :set_filter => 1
         }
       )
-      assert_equal 'text/csv; header=present', @response.media_type
+      assert_equal 'text/csv', @response.media_type
       lines = @response.body.chomp.split("\n")
       assert_include "#{issue.id};1234,50;#{str1}", lines
     end
@@ -1659,7 +1659,7 @@ class IssuesControllerTest < Redmine::ControllerTest
       }
     )
     assert_response :success
-    assert_equal 'text/csv; header=present', response.media_type
+    assert_equal 'text/csv', response.media_type
     lines = response.body.chomp.split("\n")
     assert_include '1,"Related to #7, Related to #8, Blocks #11"', lines
     assert_include '2,Blocked by #12', lines
@@ -2605,20 +2605,11 @@ class IssuesControllerTest < Redmine::ControllerTest
     assert_select 'table.attributes .category', 0
   end
 
-  def test_show_should_display_link_to_the_assigned_user
+  def test_show_should_display_link_to_the_assignee
     get(:show, :params => {:id => 2})
     assert_response :success
     assert_select '.assigned-to' do
       assert_select 'a[href="/users/3"]'
-    end
-  end
-
-  def test_show_should_display_link_to_the_assigned_group
-    Issue.find(2).update_attribute(:assigned_to_id, 10)
-    get(:show, :params => {:id => 2})
-    assert_response :success
-    assert_select '.assigned-to' do
-      assert_select 'a[href="/groups/10"]'
     end
   end
 
@@ -3155,32 +3146,6 @@ class IssuesControllerTest < Redmine::ControllerTest
 
     assert_response :success
     assert_select 'span.badge.badge-private', text: 'Private'
-  end
-
-  def test_show_should_not_display_edit_attachment_icon_for_user_without_edit_issue_permission_on_tracker
-    role = Role.find(2)
-    role.set_permission_trackers 'edit_issues', [2, 3]
-    role.save!
-
-    @request.session[:user_id] = 2
-
-    get :show, params: {id: 4}
-
-    assert_response :success
-    assert_select 'div.attachments .icon-edit',  0
-  end
-
-  def test_show_should_not_display_delete_attachment_icon_for_user_without_edit_issue_permission_on_tracker
-    role = Role.find(2)
-    role.set_permission_trackers 'edit_issues', [2, 3]
-    role.save!
-
-    @request.session[:user_id] = 2
-
-    get :show, params: {id: 4}
-
-    assert_response :success
-    assert_select 'div.attachments .icon-del', 0
   end
 
   def test_get_new
@@ -4358,9 +4323,9 @@ class IssuesControllerTest < Redmine::ControllerTest
     # Watchers notified
     assert_equal 3, ActionMailer::Base.deliveries.size
     mail = ActionMailer::Base.deliveries[1]
-    assert [mail.to].flatten.include?(User.find(3).mail)
+    assert [mail.bcc, mail.cc].flatten.include?(User.find(3).mail)
     mail = ActionMailer::Base.deliveries[2]
-    assert [mail.to].flatten.include?(User.find(8).mail)
+    assert [mail.bcc, mail.cc].flatten.include?(User.find(8).mail)
   end
 
   def test_post_create_subissue
@@ -6686,33 +6651,6 @@ class IssuesControllerTest < Redmine::ControllerTest
     assert_equal 2, issue.reload.assigned_to_id
   end
 
-  def test_update_with_value_of_none_should_set_the_values_to_blank
-    @request.session[:user_id] = 2
-    issue = Issue.find(1)
-    issue.custom_field_values = {1 => 'MySQL'}
-    issue.assigned_to_id = 2
-    issue.save!
-
-    put(
-      :update,
-      params: {
-        id: issue.id,
-        issue: {
-          assigned_to_id: 'none',
-          category_id: 'none',
-          fixed_version_id: 'none',
-          custom_field_values: { 1 => '__none__' }
-        }
-      }
-    )
-
-    issue.reload
-    assert_nil issue.assigned_to
-    assert_nil issue.category
-    assert_nil issue.fixed_version
-    assert_equal '', issue.custom_field_value(1)
-  end
-
   def test_get_bulk_edit
     @request.session[:user_id] = 2
     get(:bulk_edit, :params => {:ids => [1, 3]})
@@ -8309,77 +8247,5 @@ class IssuesControllerTest < Redmine::ControllerTest
         assert_select 'img.gravatar-child', 1
       end
     end
-  end
-
-  def test_index_should_retrieve_default_query
-    query = IssueQuery.find(4)
-    IssueQuery.stubs(:default).returns query
-
-    [nil, 1].each do |user_id|
-      @request.session[:user_id] = user_id
-      get :index
-      assert_select 'h2', text: query.name
-
-      get :index, params: { project_id: 1 }
-      assert_select 'h2', text: query.name
-    end
-  end
-
-  def test_index_should_ignore_default_query_with_without_default
-    query = IssueQuery.find(4)
-    IssueQuery.stubs(:default).returns query
-
-    [nil, 1].each do |user_id|
-      @request.session[:user_id] = user_id
-      get :index, params: { set_filter: '1', without_default: '1' }
-      assert_select 'h2', text: I18n.t(:label_issue_plural)
-
-      get :index, params: { project_id: 1, set_filter: '1', without_default: '1' }
-      assert_select 'h2', text: I18n.t(:label_issue_plural)
-    end
-  end
-
-  def test_index_should_ignore_default_query_with_session_query
-    query = IssueQuery.find 4
-    IssueQuery.stubs(:default).returns query
-    session_query = IssueQuery.find 1
-
-    @request.session[:issue_query] = { id: 1, project_id: 1}
-    @request.session[:user_id] = 1
-    get :index, params: { project_id: '1' }
-    assert_select 'h2', text: session_query.name
-  end
-
-  def test_index_global_should_ignore_default_query_with_session_query
-    query = IssueQuery.find 4
-    IssueQuery.stubs(:default).returns query
-    session_query = IssueQuery.find 5
-
-    @request.session[:issue_query] = { id: 5, project_id: nil}
-    @request.session[:user_id] = 1
-    get :index
-    assert_select 'h2', text: session_query.name
-  end
-
-  def test_index_should_use_default_query_with_invalid_session_query
-    query = IssueQuery.find 4
-    IssueQuery.stubs(:default).returns query
-
-    @request.session[:issue_query] = { id: 1, project_id: 1}
-    @request.session[:user_id] = 1
-    get :index
-    assert_select 'h2', text: query.name
-  end
-
-  def test_index_should_not_load_default_query_for_api_request
-    query = IssueQuery.find 4
-    IssueQuery.stubs(:default).returns query
-
-    @request.session[:user_id] = 1
-    get :index, params: { format: 'json' }
-
-    assert results = JSON.parse(@response.body)['issues']
-    # query filters for tracker_id == 3
-    assert results.detect{ |i| i['tracker_id'] != 3 }
   end
 end

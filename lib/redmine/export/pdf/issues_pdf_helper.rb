@@ -122,23 +122,25 @@ module Redmine
 
           # Set resize image scale
           pdf.set_image_scale(1.6)
-          text = pdf_format_text(issue, :description)
+          text =
+            textilizable(
+              issue, :description,
+              :only_path => false,
+              :edit_section_links => false,
+              :headings => false,
+              :inline_attachments => false
+            )
           pdf.RDMwriteFormattedCell(35+155, 5, '', '', text, issue.attachments, "LRB")
 
           custom_field_values = issue.visible_custom_field_values.select {|value| value.custom_field.full_width_layout?}
           custom_field_values.each do |value|
-            is_html = value.custom_field.full_text_formatting?
-            text = show_value(value, is_html)
+            text = show_value(value, false)
             next if text.blank?
 
             pdf.SetFontStyle('B', 9)
             pdf.RDMCell(35+155, 5, value.custom_field.name, "LRT", 1)
             pdf.SetFontStyle('', 9)
-            if is_html
-              pdf.RDMwriteFormattedCell(35+155, 5, '', '', text, issue.attachments, "LRB")
-            else
-              pdf.RDMwriteHTMLCell(35+155, 5, '', '', text, issue.attachments, "LRB")
-            end
+            pdf.RDMwriteHTMLCell(35+155, 5, '', '', text, issue.attachments, "LRB")
           end
 
           unless issue.leaf?
@@ -225,7 +227,14 @@ module Redmine
               if journal.notes?
                 pdf.ln unless journal.details.empty?
                 pdf.SetFontStyle('', 8)
-                text = pdf_format_text(journal, :notes)
+                text =
+                  textilizable(
+                    journal, :notes,
+                    :only_path => false,
+                    :edit_section_links => false,
+                    :headings => false,
+                    :inline_attachments => false
+                  )
                 pdf.RDMwriteFormattedCell(190, 5, '', '', text, issue.attachments, "")
               end
               pdf.ln
@@ -333,17 +342,14 @@ module Redmine
             pdf.set_y(base_y + max_height)
 
             query.block_columns.each do |column|
-              is_html = false
               if column.is_a?(QueryCustomFieldColumn)
                 cv =
                   issue.visible_custom_field_values.detect do |v|
                     v.custom_field_id == column.custom_field.id
                   end
-                is_html = cv.custom_field.full_text_formatting?
-                text = show_value(cv, is_html)
+                text = show_value(cv, false)
               else
-                text = pdf_format_text issue, column.name.to_sym
-                is_html = true
+                text = issue.send(column.name)
               end
               next if text.blank?
 
@@ -352,11 +358,7 @@ module Redmine
               pdf.SetFontStyle('B', 9)
               pdf.RDMCell(0, 5, column.caption, "LRT", 1)
               pdf.SetFontStyle('', 9)
-              if is_html
-                pdf.RDMwriteFormattedCell(0, 5, '', '', text, issue.attachments, "LRB")
-              else
-                pdf.RDMwriteHTMLCell(0, 5, '', '', text, [], "LRB")
-              end
+              pdf.RDMwriteHTMLCell(0, 5, '', '', text, [], "LRB")
               pdf.set_auto_page_break(false)
             end
           end
@@ -366,15 +368,6 @@ module Redmine
             pdf.RDMCell(0, row_height, '...')
           end
           pdf.output
-        end
-
-        def pdf_format_text(object, attribute)
-          textilizable(object, attribute,
-                       :only_path => false,
-                       :edit_section_links => false,
-                       :headings => false,
-                       :inline_attachments => false
-                      )
         end
 
         def is_cjk?

@@ -53,15 +53,13 @@ class ActionView::TestCase
 end
 
 class ActiveSupport::TestCase
-  parallelize(workers: 1)
-
   include ActionDispatch::TestProcess
 
   self.use_transactional_tests = true
   self.use_instantiated_fixtures  = false
 
   def uploaded_test_file(name, mime)
-    fixture_file_upload(name.to_s, mime, true)
+    fixture_file_upload("files/#{name}", mime, true)
   end
 
   def mock_file(options=nil)
@@ -394,11 +392,6 @@ module Redmine
   end
 
   class IntegrationTest < ActionDispatch::IntegrationTest
-    def setup
-      ActionMailer::MailDeliveryJob.disable_test_adapter
-      super
-    end
-
     def log_user(login, password)
       User.anonymous
       get "/login"

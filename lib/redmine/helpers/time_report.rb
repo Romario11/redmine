@@ -22,8 +22,9 @@ module Redmine
     class TimeReport
       attr_reader :criteria, :columns, :hours, :total_hours, :periods
 
-      def initialize(project, criteria, columns, time_entry_scope)
+      def initialize(project, issue, criteria, columns, time_entry_scope)
         @project = project
+        @issue = issue
 
         @criteria = criteria || []
         @criteria = @criteria.select{|criteria| available_criteria.has_key? criteria}

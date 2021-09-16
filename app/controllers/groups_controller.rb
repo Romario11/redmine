@@ -21,7 +21,7 @@ class GroupsController < ApplicationController
   layout 'admin'
   self.main_menu = false
 
-  before_action :require_admin, :except => [:show]
+  before_action :require_admin
   before_action :find_group, :except => [:index, :new, :create]
   accept_api_auth :index, :show, :create, :update, :destroy, :add_users, :remove_user
 
@@ -50,12 +50,8 @@ class GroupsController < ApplicationController
   end
 
   def show
-    return render_404 unless @group.visible?
-
     respond_to do |format|
-      format.html do
-        render :layout => 'base'
-      end
+      format.html
       format.api
     end
   end

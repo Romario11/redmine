@@ -41,7 +41,6 @@ class Group < Principal
 
   safe_attributes(
     'name',
-    'twofa_required',
     'user_ids',
     'custom_field_values',
     'custom_fields',
@@ -71,10 +70,6 @@ class Group < Principal
   # Returns true if the group can be given to a user
   def givable?
     !builtin?
-  end
-
-  def css_classes
-    'group'
   end
 
   def user_added(user)

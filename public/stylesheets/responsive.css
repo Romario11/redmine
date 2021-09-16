@@ -76,6 +76,10 @@
     position: relative;
     overflow-x: hidden; /* hide horizontal overflow */
     max-width: 100%;
+  }
+
+  #wrapper,
+  #wrapper2 {
     margin: 0;
   }
 

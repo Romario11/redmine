@@ -20,7 +20,7 @@
 require File.expand_path('../../../../test_helper', __FILE__)
 
 class Redmine::ProjectJumpBoxTest < ActiveSupport::TestCase
-  fixtures :users, :projects, :user_preferences, :members, :roles, :member_roles
+  fixtures :users, :projects, :user_preferences
 
   def setup
     @user = User.find_by_login 'jsmith'

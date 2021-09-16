@@ -29,7 +29,6 @@ class IssuesController < ApplicationController
   accept_api_auth :index, :show, :create, :update, :destroy
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
-  rescue_from Query::QueryError, :with => :query_error
 
   helper :journals
   helper :projects
@@ -44,7 +43,6 @@ class IssuesController < ApplicationController
 
   def index
     use_session = !request.format.csv?
-    retrieve_default_query(use_session)
     retrieve_query(IssueQuery, use_session)
 
     if @query.valid?
@@ -61,10 +59,6 @@ class IssuesController < ApplicationController
           @issue_count = @query.issue_count
           @issues = @query.issues(:offset => @offset, :limit => @limit)
           Issue.load_visible_relations(@issues) if include_in_api_response?('relations')
-          if User.current.allowed_to?(:view_time_entries, nil, :global => true)
-            Issue.load_visible_spent_hours(@issues)
-            Issue.load_visible_total_spent_hours(@issues)
-          end
         end
         format.atom do
           @issues = @query.issues(:limit => Setting.feeds_limit.to_i)
@@ -118,7 +112,6 @@ class IssuesController < ApplicationController
         render :template => 'issues/show'
       end
       format.api do
-        @allowed_statuses = @issue.new_statuses_allowed_to(User.current)
         @changesets = @issue.changesets.visible.preload(:repository, :user).to_a
         @changesets.reverse! if User.current.wants_comments_in_reverse_order?
       end
@@ -196,7 +189,6 @@ class IssuesController < ApplicationController
     begin
       saved = save_issue_with_child_records
     rescue ActiveRecord::StaleObjectError
-      @issue.detach_saved_attachments
       @conflict = true
       if params[:last_journal_id]
         @conflict_journals = @issue.journals_after(params[:last_journal_id]).to_a
@@ -476,29 +468,6 @@ class IssuesController < ApplicationController
 
   private
 
-  def query_error(exception)
-    session.delete(:issue_query)
-    super
-  end
-
-  def retrieve_default_query(use_session)
-    return if params[:query_id].present?
-    return if api_request?
-    return if params[:set_filter] && (params.key?(:op) || params.key?(:f))
-
-    if params[:without_default].present?
-      params[:set_filter] = 1
-      return
-    end
-    if !params[:set_filter] && use_session && session[:issue_query]
-      query_id, project_id = session[:issue_query].values_at(:id, :project_id)
-      return if IssueQuery.where(id: query_id).exists? && project_id == @project&.id
-    end
-    if default_query = IssueQuery.default(project: @project)
-      params[:query_id] = default_query.id
-    end
-  end
-
   def retrieve_previous_and_next_issue_ids
     if params[:prev_issue_id].present? || params[:next_issue_id].present?
       @prev_issue_id = params[:prev_issue_id].presence.try(:to_i)
@@ -561,7 +530,6 @@ class IssuesController < ApplicationController
         return false
       end
     end
-    issue_attributes = replace_none_values_with_blank(issue_attributes)
     @issue.safe_attributes = issue_attributes
     @priorities = IssuePriority.active
     @allowed_statuses = @issue.new_statuses_allowed_to(User.current)

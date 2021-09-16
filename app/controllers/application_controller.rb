@@ -413,18 +413,10 @@ class ApplicationController < ActionController::Base
 
   def parse_params_for_bulk_update(params)
     attributes = (params || {}).reject {|k, v| v.blank?}
+    attributes.keys.each {|k| attributes[k] = '' if attributes[k] == 'none'}
     if custom = attributes[:custom_field_values]
       custom.reject! {|k, v| v.blank?}
-    end
-
-    replace_none_values_with_blank(attributes)
-  end
-
-  def replace_none_values_with_blank(params)
-    attributes = (params || {})
-    attributes.each_key {|k| attributes[k] = '' if attributes[k] == 'none'}
-    if (custom = attributes[:custom_field_values])
-      custom.each_key do |k|
+      custom.keys.each do |k|
         if custom[k].is_a?(Array)
           custom[k] << '' if custom[k].delete('__none__')
         else
@@ -700,7 +692,7 @@ class ApplicationController < ActionController::Base
 
   # Returns a string that can be used as filename value in Content-Disposition header
   def filename_for_content_disposition(name)
-    name
+    %r{(MSIE|Trident|Edge)}.match?(request.env['HTTP_USER_AGENT'].to_s) ? ERB::Util.url_encode(name) : name
   end
 
   def api_request?
@@ -733,13 +725,6 @@ class ApplicationController < ActionController::Base
     render_error l(:error_query_statement_invalid)
   end
 
-  def query_error(exception)
-    Rails.logger.debug "#{exception.class.name}: #{exception.message}"
-    Rails.logger.debug "    #{exception.backtrace.join("\n    ")}"
-
-    render_404
-  end
-
   # Renders a 204 response for successful updates or deletions via the API
   def render_api_ok
     render_api_head :no_content
@@ -759,7 +744,7 @@ class ApplicationController < ActionController::Base
 
   def render_api_errors(*messages)
     @error_messages = messages.flatten
-    render :template => 'common/error_messages', :format => [:api], :status => :unprocessable_entity, :layout => nil
+    render :template => 'common/error_messages.api', :status => :unprocessable_entity, :layout => nil
   end
 
   # Overrides #_include_layout? so that #render with no arguments

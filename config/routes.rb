@@ -83,7 +83,7 @@ Rails.application.routes.draw do
   match '/imports/:id/run', :to => 'imports#run', :via => [:get, :post], :as => 'import_run'
 
   match 'my/account', :controller => 'my', :action => 'account', :via => [:get, :put]
-  match 'my/account/destroy', :controller => 'my', :action => 'destroy', :via => [:get, :post], :as => :delete_my_account
+  match 'my/account/destroy', :controller => 'my', :action => 'destroy', :via => [:get, :post]
   match 'my/page', :controller => 'my', :action => 'page', :via => :get
   post 'my/page', :to => 'my#update_page'
   match 'my', :controller => 'my', :action => 'index', :via => :get # Redirects to my/page
@@ -131,10 +131,10 @@ Rails.application.routes.draw do
 
     member do
       get 'settings(/:tab)', :action => 'settings', :as => 'settings'
-      match 'archive', :via => [:post, :put]
-      match 'unarchive', :via => [:post, :put]
-      match 'close', :via => [:post, :put]
-      match 'reopen', :via => [:post, :put]
+      post 'archive'
+      post 'unarchive'
+      post 'close'
+      post 'reopen'
       match 'copy', :via => [:get, :post]
       match 'bookmark', :via => [:delete, :post]
     end
@@ -215,7 +215,7 @@ Rails.application.routes.draw do
     end
     collection do
       match 'bulk_edit', :via => [:get, :post]
-      match 'bulk_update', :via => [:post, :patch]
+      post 'bulk_update'
     end
     resources :time_entries, :controller => 'timelog', :only => [:new, :create]
     shallow do
@@ -349,7 +349,8 @@ Rails.application.routes.draw do
   resources :enumerations, :except => :show
   match 'enumerations/:type', :to => 'enumerations#index', :via => :get
 
-  get '(projects/:id)/search', :controller => 'search', :action => 'index', :as => 'search'
+  get 'projects/:id/search', :controller => 'search', :action => 'index'
+  get 'search', :controller => 'search', :action => 'index'
 
 
   get  'mail_handler', :to => 'mail_handler#new'
@@ -371,17 +372,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :workflows, only: [:index] do
-    collection do
-      get 'edit'
-      patch 'update'
-      get 'permissions'
-      patch 'update_permissions'
-      get 'copy'
-      post 'duplicate'
-    end
-  end
-
+  match 'workflows', :controller => 'workflows', :action => 'index', :via => :get
+  match 'workflows/edit', :controller => 'workflows', :action => 'edit', :via => [:get, :post]
+  match 'workflows/permissions', :controller => 'workflows', :action => 'permissions', :via => [:get, :post]
+  match 'workflows/copy', :controller => 'workflows', :action => 'copy', :via => [:get, :post]
   match 'settings', :controller => 'settings', :action => 'index', :via => :get
   match 'settings/edit', :controller => 'settings', :action => 'edit', :via => [:get, :post]
   match 'settings/plugin/:id', :controller => 'settings', :action => 'plugin', :via => [:get, :post], :as => 'plugin_settings'

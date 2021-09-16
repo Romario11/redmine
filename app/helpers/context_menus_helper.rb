@@ -37,11 +37,10 @@ module ContextMenusHelper
   def bulk_update_custom_field_context_menu_link(field, text, value)
     context_menu_link(
       h(text),
-      _bulk_update_issues_path(@issue,
-                              :ids => @issue_ids,
+      bulk_update_issues_path(:ids => @issue_ids,
                               :issue => {'custom_field_values' => {field.id => value}},
                               :back_url => @back),
-      :method => :patch,
+      :method => :post,
       :selected => (@issue && @issue.custom_field_value(field) == value)
     )
   end

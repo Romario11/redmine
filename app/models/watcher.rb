@@ -22,7 +22,7 @@ class Watcher < ActiveRecord::Base
   belongs_to :user, :class_name => 'Principal'
 
   validates_presence_of :user
-  validates_uniqueness_of :user_id, :scope => [:watchable_type, :watchable_id], :case_sensitive => true
+  validates_uniqueness_of :user_id, :scope => [:watchable_type, :watchable_id]
   validate :validate_user
 
   # Returns true if at least one object among objects is watched by user

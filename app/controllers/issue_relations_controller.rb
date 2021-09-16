@@ -56,13 +56,10 @@ class IssueRelationsController < ApplicationController
       @relation.safe_attributes = params_relation
       @relation.init_journals(User.current)
 
-      begin
-        saved = @relation.save
-      rescue ActiveRecord::RecordNotUnique
-        @relation.errors.add :base, :taken
+      unless saved = @relation.save
+        saved = false
+        unsaved_relations << @relation
       end
-
-      unsaved_relations << @relation unless saved
     end
 
     respond_to do |format|

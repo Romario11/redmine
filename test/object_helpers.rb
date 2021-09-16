@@ -105,7 +105,7 @@ module ObjectHelpers
   def Issue.generate!(attributes={}, &block)
     issue = Issue.generate(attributes, &block)
     issue.save!
-    issue.reload
+    issue
   end
 
   # Generates an issue with 2 children and a grandchild

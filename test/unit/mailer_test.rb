@@ -219,33 +219,6 @@ class MailerTest < ActiveSupport::TestCase
     assert_equal issue.author.login, mail.header['X-Redmine-Sender'].to_s
   end
 
-  def test_email_headers_should_not_include_assignee_when_not_assigned
-    issue = Issue.find(6)
-    issue.init_journal(User.current)
-    issue.update(:status_id => 4)
-    issue.update(:assigned_to_id => nil)
-    mail = last_email
-    assert_not mail.header['X-Redmine-Issue-Assignee']
-  end
-
-  def test_email_headers_should_include_assignee_when_assigned
-    issue = Issue.find(6)
-    issue.init_journal(User.current)
-    issue.update(:assigned_to_id => 2)
-    mail = last_email
-    assert_equal 'jsmith', mail.header['X-Redmine-Issue-Assignee'].to_s
-  end
-
-  def test_email_headers_should_include_assignee_if_assigned_to_group
-    issue = Issue.find(6)
-    with_settings :issue_group_assignment => 1 do
-      issue.init_journal(User.current)
-      issue.update(:assigned_to_id => 10)
-    end
-    mail = last_email
-    assert_equal 'Group (A Team)', mail.header['X-Redmine-Issue-Assignee'].to_s
-  end
-
   def test_plain_text_mail
     Setting.plain_text_mail = 1
     journal = Journal.find(2)
@@ -324,7 +297,7 @@ class MailerTest < ActiveSupport::TestCase
     user.pref.save
     User.current = user
     Mailer.deliver_news_added(news.reload)
-    assert_equal 1, last_email.to.size
+    assert_equal 1, last_email.bcc.size
 
     # nobody to notify
     user.pref.no_self_notified = true
@@ -413,10 +386,11 @@ class MailerTest < ActiveSupport::TestCase
     issue = Issue.find(3)
     user = User.find(1)
     %w(UTC Paris Tokyo).each do |zone|
-      Time.use_zone(zone) do
-        assert_match /^redmine\.issue-3\.20060719190727\.1@example\.net/, Mailer.token_for(issue, user)
-      end
+      Time.zone = zone
+      assert_match /^redmine\.issue-3\.20060719190727\.1@example\.net/, Mailer.token_for(issue, user)
     end
+  ensure
+    Time.zone = zone_was
   end
 
   test "#issue_add should notify project members" do
@@ -430,8 +404,8 @@ class MailerTest < ActiveSupport::TestCase
     issue = Issue.find(1)
     assert Mailer.deliver_issue_add(issue)
 
-    assert mail = ActionMailer::Base.deliveries.find {|m| m.to.include?('dlopper@somenet.foo')}
-    assert mail.to.include?('otheremail@somenet.foo')
+    assert mail = ActionMailer::Base.deliveries.find {|m| m.bcc.include?('dlopper@somenet.foo')}
+    assert mail.bcc.include?('otheremail@somenet.foo')
   end
 
   test "#issue_add should not notify project members that are not allow to view the issue" do
@@ -650,8 +624,8 @@ class MailerTest < ActiveSupport::TestCase
   def test_version_file_added
     attachements = [Attachment.find_by_container_type('Version')]
     assert Mailer.deliver_attachments_added(attachements)
-    assert_not_nil last_email.to
-    assert last_email.to.any?
+    assert_not_nil last_email.bcc
+    assert last_email.bcc.any?
     assert_select_email do
       assert_select "a[href=?]", "http://localhost:3000/projects/ecookbook/files"
     end
@@ -660,8 +634,8 @@ class MailerTest < ActiveSupport::TestCase
   def test_project_file_added
     attachements = [Attachment.find_by_container_type('Project')]
     assert Mailer.deliver_attachments_added(attachements)
-    assert_not_nil last_email.to
-    assert last_email.to.any?
+    assert_not_nil last_email.bcc
+    assert last_email.bcc.any?
     assert_select_email do
       assert_select "a[href=?]", "http://localhost:3000/projects/ecookbook/files"
     end
@@ -735,7 +709,7 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.reminders(:days => days)
     assert_equal 1, ActionMailer::Base.deliveries.size
     mail = last_email
-    assert mail.to.include?('dlopper@somenet.foo')
+    assert mail.bcc.include?('dlopper@somenet.foo')
     assert_mail_body_match 'Bug #3: Error 281 when updating a recipe (5 days late)', mail
     assert_mail_body_match 'View all issues (2 open)', mail
     url =
@@ -763,7 +737,7 @@ class MailerTest < ActiveSupport::TestCase
       Mailer.reminders(:days => 42)
       assert_equal 1, ActionMailer::Base.deliveries.size
       mail = last_email
-      assert mail.to.include?('dlopper@somenet.foo')
+      assert mail.bcc.include?('dlopper@somenet.foo')
       assert_mail_body_match(
         'Bug #3: Error 281 when updating a recipe (En retard de 5 jours)',
         mail
@@ -783,7 +757,7 @@ class MailerTest < ActiveSupport::TestCase
       Mailer.reminders(:days => 42)
       assert_equal 1, ActionMailer::Base.deliveries.size
       mail = last_email
-      assert mail.to.include?('dlopper@somenet.foo')
+      assert mail.bcc.include?('dlopper@somenet.foo')
       assert_mail_body_no_match 'Closed issue', mail
     end
   end
@@ -795,7 +769,7 @@ class MailerTest < ActiveSupport::TestCase
     Mailer.reminders(:days => 42, :users => ['3'])
     assert_equal 1, ActionMailer::Base.deliveries.size # No mail for dlopper
     mail = last_email
-    assert mail.to.include?('dlopper@somenet.foo')
+    assert mail.bcc.include?('dlopper@somenet.foo')
     assert_mail_body_match 'Bug #3: Error 281 when updating a recipe (5 days late)', mail
   end
 
@@ -828,7 +802,7 @@ class MailerTest < ActiveSupport::TestCase
         )
         assert_mail_body_match 'Assigned to group (Due in 5 days)', mail
         assert_mail_body_match(
-          "View all issues (#{mail.to.include?('dlopper@somenet.foo') ? 3 : 2} open)",
+          "View all issues (#{mail.bcc.include?('dlopper@somenet.foo') ? 3 : 2} open)",
           mail
         )
       end
@@ -1090,14 +1064,14 @@ class MailerTest < ActiveSupport::TestCase
   end
 
   def test_with_synched_deliveries_should_yield_with_synced_deliveries
-    ActionMailer::MailDeliveryJob.queue_adapter = ActiveJob::QueueAdapters::AsyncAdapter.new
+    ActionMailer::DeliveryJob.queue_adapter = ActiveJob::QueueAdapters::AsyncAdapter.new
 
     Mailer.with_synched_deliveries do
-      assert_kind_of ActiveJob::QueueAdapters::InlineAdapter, ActionMailer::MailDeliveryJob.queue_adapter
+      assert_kind_of ActiveJob::QueueAdapters::InlineAdapter, ActionMailer::DeliveryJob.queue_adapter
     end
-    assert_kind_of ActiveJob::QueueAdapters::AsyncAdapter, ActionMailer::MailDeliveryJob.queue_adapter
+    assert_kind_of ActiveJob::QueueAdapters::AsyncAdapter, ActionMailer::DeliveryJob.queue_adapter
   ensure
-    ActionMailer::MailDeliveryJob.queue_adapter = ActiveJob::QueueAdapters::InlineAdapter.new
+    ActionMailer::DeliveryJob.queue_adapter = ActiveJob::QueueAdapters::InlineAdapter.new
   end
 
   def test_email_addresses_should_keep_addresses
@@ -1125,7 +1099,7 @@ class MailerTest < ActiveSupport::TestCase
 
   # Returns an array of email addresses to which emails were sent
   def recipients
-    ActionMailer::Base.deliveries.map(&:to).flatten.sort
+    ActionMailer::Base.deliveries.map(&:bcc).flatten.sort
   end
 
   def last_email
@@ -1143,6 +1117,6 @@ class MailerTest < ActiveSupport::TestCase
   end
 
   def destination_user(mail)
-    EmailAddress.where(:address => [mail.to, mail.cc].flatten).map(&:user).first
+    EmailAddress.where(:address => [mail.to, mail.cc, mail.bcc].flatten).map(&:user).first
   end
 end

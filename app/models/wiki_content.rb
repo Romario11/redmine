@@ -98,4 +98,8 @@ class WikiContent < ActiveRecord::Base
       Mailer.deliver_wiki_content_updated(self)
     end
   end
+
+  # For backward compatibility
+  # TODO: remove it in Redmine 5
+  Version = WikiContentVersion
 end

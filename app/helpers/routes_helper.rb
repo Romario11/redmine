@@ -29,14 +29,6 @@ module RoutesHelper
     end
   end
 
-  def _project_issues_url(project, *args)
-    if project
-      project_issues_url(project, *args)
-    else
-      issues_url(*args)
-    end
-  end
-
   def _project_news_path(project, *args)
     if project
       project_news_index_path(project, *args)
@@ -84,16 +76,6 @@ module RoutesHelper
       new_project_time_entry_path(project, *args)
     else
       new_time_entry_path(*args)
-    end
-  end
-
-  # Returns the path to bulk update issues or to issue path
-  # if only one issue is selected for bulk update
-  def _bulk_update_issues_path(issue, *args)
-    if issue
-      issue_path(issue, *args)
-    else
-      bulk_update_issues_path(*args)
     end
   end
 

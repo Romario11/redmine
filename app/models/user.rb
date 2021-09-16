@@ -407,10 +407,7 @@ class User < Principal
   end
 
   def must_activate_twofa?
-    (
-      Setting.twofa_required? ||
-      (Setting.twofa_optional? && groups.any?(&:twofa_required?))
-    ) && !twofa_active?
+    Setting.twofa == '2' && !twofa_active?
   end
 
   def pref
@@ -668,7 +665,7 @@ class User < Principal
       return @project_ids_by_role if @project_ids_by_role
 
       group_class = anonymous? ? GroupAnonymous.unscoped : GroupNonMember.unscoped
-      group_id = group_class.pick(:id)
+      group_id = group_class.pluck(:id).first
 
       members = Member.joins(:project, :member_roles).
         where("#{Project.table_name}.status <> 9").
@@ -951,11 +948,7 @@ class User < Principal
     Token.where('user_id = ?', id).delete_all
     Watcher.where('user_id = ?', id).delete_all
     WikiContent.where(['author_id = ?', id]).update_all(['author_id = ?', substitute.id])
-    WikiContentVersion.where(['author_id = ?', id]).update_all(['author_id = ?', substitute.id])
-    user_custom_field_ids = CustomField.where(field_format: 'user').ids
-    if user_custom_field_ids.any?
-      CustomValue.where(custom_field_id: user_custom_field_ids, value: self.id.to_s).delete_all
-    end
+    WikiContent::Version.where(['author_id = ?', id]).update_all(['author_id = ?', substitute.id])
   end
 
   # Singleton class method is public

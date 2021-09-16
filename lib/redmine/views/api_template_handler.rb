@@ -20,7 +20,7 @@
 module Redmine
   module Views
     class ApiTemplateHandler
-      def self.call(template, source = nil)
+      def self.call(template)
         "Redmine::Views::Builders.for(params[:format], request, response) do |api|; #{template.source}; self.output_buffer = api.output; end"
       end
     end

@@ -803,47 +803,6 @@ class QueryTest < ActiveSupport::TestCase
     end
   end
 
-  def test_filter_notes
-    user = User.generate!
-    Journal.create!(:user_id => user.id, :journalized => Issue.find(2), :notes => 'Notes.')
-    Journal.create!(:user_id => user.id, :journalized => Issue.find(3), :notes => 'Notes.')
-
-    issue_journals = Issue.find(1).journals.sort
-    assert_equal ['Journal notes', 'Some notes with Redmine links: #2, r2.'], issue_journals.map(&:notes)
-    assert_equal [false, false], issue_journals.map(&:private_notes)
-
-    query = IssueQuery.new(:name => '_')
-    filter_name = 'notes'
-    assert_include filter_name, query.available_filters.keys
-
-    {
-      '~' => [1, 2, 3],
-      '!~' => Issue.ids.sort - [1, 2, 3],
-      '^' => [2, 3],
-      '$' => [1],
-    }.each do |operator, expected|
-      query.filters = {filter_name => {:operator => operator, :values => ['Notes']}}
-      assert_equal expected, find_issues_with_query(query).map(&:id).sort
-    end
-  end
-
-  def test_filter_notes_should_ignore_private_notes_that_are_not_visible
-    user = User.generate!
-    Journal.create!(:user_id => user.id, :journalized => Issue.find(2), :notes => 'Notes.', :private_notes => true)
-    Journal.create!(:user_id => user.id, :journalized => Issue.find(3), :notes => 'Notes.')
-
-    issue_journals = Issue.find(1).journals.sort
-    assert_equal ['Journal notes', 'Some notes with Redmine links: #2, r2.'], issue_journals.map(&:notes)
-    assert_equal [false, false], issue_journals.map(&:private_notes)
-
-    query = IssueQuery.new(:name => '_')
-    filter_name = 'notes'
-    assert_include filter_name, query.available_filters.keys
-
-    query.filters = {filter_name => {:operator => '~', :values => ['Notes']}}
-    assert_equal [1, 3], find_issues_with_query(query).map(&:id).sort
-  end
-
   def test_filter_updated_by
     user = User.generate!
     Journal.create!(:user_id => user.id, :journalized => Issue.find(2), :notes => 'Notes')
@@ -1525,48 +1484,6 @@ class QueryTest < ActiveSupport::TestCase
     query.filters = {"attachment" => {:operator => '$', :values =>  ['zip']}}
     issues = find_issues_with_query(query)
     assert_equal [3, 4], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_any
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '*', :values =>  ['']}}
-    issues = find_issues_with_query(query)
-    assert_equal [2, 3, 14], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_none
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '!*', :values =>  ['']}}
-    issues = find_issues_with_query(query)
-    assert_equal [2, 3, 4, 14], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_contains
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '~', :values =>  ['attachment']}}
-    issues = find_issues_with_query(query)
-    assert_equal [3, 14], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_does_not_contain
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '!~', :values =>  ['attachment']}}
-    issues = find_issues_with_query(query)
-    assert_equal [2], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_starts_with
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '^', :values =>  ['attachment']}}
-    issues = find_issues_with_query(query)
-    assert_equal [14], issues.collect(&:id).sort
-  end
-
-  def test_filter_on_attachment_description_when_ends_with
-    query = IssueQuery.new(:name => '_')
-    query.filters = {"attachment_description" => {:operator => '$', :values =>  ['attachment']}}
-    issues = find_issues_with_query(query)
-    assert_equal [3], issues.collect(&:id).sort
   end
 
   def test_filter_on_subject_when_starts_with
@@ -2749,66 +2666,5 @@ class QueryTest < ActiveSupport::TestCase
 
     # Non-paginated issue ids and paginated issue ids should be in the same order.
     assert_equal issue_ids, paginated_issue_ids
-  end
-
-  def test_destruction_of_default_query_should_remove_reference_from_project
-    project = Project.find('ecookbook')
-    project_query = IssueQuery.find(1)
-    project.update_column :default_issue_query_id, project_query.id
-
-    project_query.destroy
-    project.reload
-    assert_nil project.default_issue_query_id
-  end
-
-  def test_should_determine_default_issue_query
-    project = Project.find('ecookbook')
-    user = project.users.first
-
-    project_query = IssueQuery.find(1)
-    query = IssueQuery.find(4)
-    user_query = IssueQuery.find(3)
-    user_query.update_column :user_id, user.id
-
-    [nil, user, User.anonymous].each do |u|
-      [nil, project].each do |p|
-        assert_nil IssueQuery.default(project: p, user: u)
-      end
-    end
-
-    # only global default is set
-    with_settings :default_issue_query => query.id do
-      [nil, user, User.anonymous].each do |u|
-        [nil, project].each do |p|
-          assert_equal query, IssueQuery.default(project: p, user: u)
-        end
-      end
-    end
-
-    # with project default
-    assert_equal project.id, project_query.project_id
-    project.update_column :default_issue_query_id, project_query.id
-    [nil, user, User.anonymous].each do |u|
-      assert_nil IssueQuery.default(project: nil, user: u)
-      assert_equal project_query, IssueQuery.default(project: project, user: u)
-    end
-
-    # project default should override global default
-    with_settings :default_issue_query => query.id do
-      [nil, user, User.anonymous].each do |u|
-        assert_equal query, IssueQuery.default(project: nil, user: u)
-        assert_equal project_query, IssueQuery.default(project: project, user: u)
-      end
-    end
-
-    # user default, overrides project and global default
-    user.pref.default_issue_query = user_query.id
-    user.pref.save
-    with_settings :default_issue_query => query.id do
-      [nil, project].each do |p|
-        assert_equal user_query, IssueQuery.default(project: p, user: user)
-        assert_equal user_query, IssueQuery.default(project: p, user: user)
-      end
-    end
   end
 end

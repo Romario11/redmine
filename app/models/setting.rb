@@ -85,7 +85,6 @@ class Setting < ActiveRecord::Base
 
   validates_uniqueness_of(
     :name,
-    :case_sensitive => true,
     :if => Proc.new do |setting|
       setting.new_record? || setting.name_changed?
     end
@@ -234,14 +233,6 @@ class Setting < ActiveRecord::Base
     # unpair all current 2FA pairings when switching off 2FA
     Redmine::Twofa.unpair_all! if params == '0' && self.twofa?
     params
-  end
-
-  def self.twofa_required?
-    twofa == '2'
-  end
-
-  def self.twofa_optional?
-    twofa == '1'
   end
 
   # Helper that returns an array based on per_page_options setting

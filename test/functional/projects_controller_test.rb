@@ -203,7 +203,7 @@ class ProjectsControllerTest < Redmine::ControllerTest
     with_settings :date_format => '%m/%d/%Y' do
       get :index, :params => {:format => 'csv'}
       assert_response :success
-      assert_equal 'text/csv; header=present', response.media_type
+      assert_equal 'text/csv', response.media_type
     end
   end
 
@@ -1110,47 +1110,9 @@ class ProjectsControllerTest < Redmine::ControllerTest
     assert_nil Project.find_by_id(1)
   end
 
-  def test_destroy_should_destroy_archived_project
-    set_tmp_attachments_directory
-    @request.session[:user_id] = 1 # admin
-
-    Project.find_by_id(2).update_attribute :status, Project::STATUS_ARCHIVED
-
-    assert_difference 'Project.count', -1 do
-      delete(
-        :destroy,
-        :params => {
-          :id => 2,
-          :confirm => 'onlinestore'
-        }
-      )
-      assert_redirected_to '/admin/projects'
-    end
-    assert_nil Project.find_by_id(2)
-  end
-
   def test_destroy_with_normal_user_should_destroy
     set_tmp_attachments_directory
     @request.session[:user_id] = 2 # non-admin
-
-    assert_difference 'Project.count', -1 do
-      delete(
-        :destroy,
-        :params => {
-          :id => 2,
-          :confirm => 'onlinestore'
-        }
-      )
-      assert_redirected_to '/projects'
-    end
-    assert_nil Project.find_by_id(2)
-  end
-
-  def test_destroy_with_normal_user_should_destroy_closed_project
-    set_tmp_attachments_directory
-    @request.session[:user_id] = 2 # non-admin
-
-    Project.find_by_id(2).update_attribute :status, Project::STATUS_CLOSED
 
     assert_difference 'Project.count', -1 do
       delete(

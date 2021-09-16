@@ -74,8 +74,8 @@ class Mailer < ActionMailer::Base
     redmine_headers 'Project' => issue.project.identifier,
                     'Issue-Tracker' => issue.tracker.name,
                     'Issue-Id' => issue.id,
-                    'Issue-Author' => issue.author.login,
-                    'Issue-Assignee' => assignee_for_header(issue)
+                    'Issue-Author' => issue.author.login
+    redmine_headers 'Issue-Assignee' => issue.assigned_to.login if issue.assigned_to
     message_id issue
     references issue
     @author = issue.author
@@ -106,8 +106,8 @@ class Mailer < ActionMailer::Base
     redmine_headers 'Project' => issue.project.identifier,
                     'Issue-Tracker' => issue.tracker.name,
                     'Issue-Id' => issue.id,
-                    'Issue-Author' => issue.author.login,
-                    'Issue-Assignee' => assignee_for_header(issue)
+                    'Issue-Author' => issue.author.login
+    redmine_headers 'Issue-Assignee' => issue.assigned_to.login if issue.assigned_to
     message_id journal
     references issue
     @author = journal.user
@@ -642,13 +642,13 @@ class Mailer < ActionMailer::Base
   # Rake will likely end, causing the in-process thread pool to be deleted, before
   # any/all of the .deliver_later emails are processed
   def self.with_synched_deliveries(&block)
-    adapter = ActionMailer::MailDeliveryJob.queue_adapter
+    adapter = ActionMailer::DeliveryJob.queue_adapter
     if adapter.is_a?(ActiveJob::QueueAdapters::AsyncAdapter)
-      ActionMailer::MailDeliveryJob.queue_adapter = ActiveJob::QueueAdapters::InlineAdapter.new
+      ActionMailer::DeliveryJob.queue_adapter = ActiveJob::QueueAdapters::InlineAdapter.new
     end
     yield
   ensure
-    ActionMailer::MailDeliveryJob.queue_adapter = adapter
+    ActionMailer::DeliveryJob.queue_adapter = adapter
   end
 
   def mail(headers={}, &block)
@@ -695,6 +695,13 @@ class Mailer < ActionMailer::Base
 
     if @author&.logged?
       redmine_headers 'Sender' => @author.login
+    end
+
+    # Blind carbon copy recipients
+    if Setting.bcc_recipients?
+      headers[:bcc] = [headers[:to], headers[:cc]].flatten.uniq.reject(&:blank?)
+      headers[:to] = nil
+      headers[:cc] = nil
     end
 
     if @message_id_object
@@ -753,16 +760,7 @@ class Mailer < ActionMailer::Base
 
   # Appends a Redmine header field (name is prepended with 'X-Redmine-')
   def redmine_headers(h)
-    h.compact.each {|k, v| headers["X-Redmine-#{k}"] = v.to_s}
-  end
-
-  def assignee_for_header(issue)
-    case issue.assigned_to
-    when User
-      issue.assigned_to.login
-    when Group
-      "Group (#{issue.assigned_to.name})"
-    end
+    h.each {|k, v| headers["X-Redmine-#{k}"] = v.to_s}
   end
 
   # Singleton class method is public

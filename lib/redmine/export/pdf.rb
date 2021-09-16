@@ -104,14 +104,6 @@ module Redmine
           atta = RDMPdfEncoding.attach(@attachments, attrname, "UTF-8")
           if atta
             return atta.diskfile
-          elsif %r{/attachments/download/(?<id>[^/]+)/} =~ attrname and
-                atta = @attachments.find{|a| a.id.to_s == id} and
-                atta.readable? and atta.visible?
-            return atta.diskfile
-          elsif %r{/attachments/thumbnail/(?<id>[^/]+)/(?<size>\d+)} =~ attrname and
-                atta = @attachments.find{|a| a.id.to_s == id} and
-                atta.readable? and atta.visible?
-            return atta.thumbnail(size: size)
           else
             return nil
           end

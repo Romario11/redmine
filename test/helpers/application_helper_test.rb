@@ -1328,7 +1328,7 @@ class ApplicationHelperTest < Redmine::HelperTest
       </code></pre>
     RAW
     expected = <<~EXPECTED
-      <pre><code class="ECMA_script syntaxhl" data-language=\"ECMA_script\"><span class="cm">/* Hello */</span><span class="nb">document</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello World!</span><span class="dl">"</span><span class="p">);</span></code></pre>
+      <pre><code class="ECMA_script syntaxhl"><span class="cm">/* Hello */</span><span class="nb">document</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello World!</span><span class="dl">"</span><span class="p">);</span></code></pre>
     EXPECTED
     assert_equal expected.gsub(%r{[\r\n\t]}, ''), textilizable(raw).gsub(%r{[\r\n\t]}, '')
   end
@@ -1340,7 +1340,7 @@ class ApplicationHelperTest < Redmine::HelperTest
       </code></pre>
     RAW
     expected = <<~EXPECTED
-      <pre><code class=\"ruby syntaxhl\" data-language=\"ruby\"><span class=\"n\">x</span> <span class=\"o\">=</span> <span class=\"n\">a</span> <span class=\"o\">&amp;</span> <span class=\"n\">b</span></code></pre>
+      <pre><code class=\"ruby syntaxhl\"><span class=\"n\">x</span> <span class=\"o\">=</span> <span class=\"n\">a</span> <span class=\"o\">&amp;</span> <span class=\"n\">b</span></code></pre>
     EXPECTED
     with_settings :text_formatting => 'textile' do
       assert_equal expected.gsub(%r{[\r\n\t]}, ''), textilizable(raw).gsub(%r{[\r\n\t]}, '')
@@ -1701,37 +1701,13 @@ class ApplicationHelperTest < Redmine::HelperTest
     end
   end
 
-  def test_link_to_user_should_link_to_locked_user_only_if_current_user_is_admin
-    user = User.find(5)
-    assert user.locked?
-
+  def test_link_to_user_should_link_to_locked_user_if_current_user_is_admin
     with_current_user User.find(1) do
-      result = link_to('Dave2 Lopper2', '/users/5', :class => 'user locked assigned_to')
-      assert_equal result, link_to_user(user, :class => 'assigned_to')
+      user = User.find(5)
+      assert user.locked?
+      result = link_to("Dave2 Lopper2", "/users/5", :class => "user locked")
+      assert_equal result, link_to_user(user)
     end
-
-    with_current_user User.find(2) do
-      result = 'Dave2 Lopper2'
-      assert_equal result, link_to_user(user, :class => 'assigned_to')
-    end
-  end
-
-  def test_link_to_principal_should_link_to_user
-    user = User.find(2)
-    result = link_to('John Smith', '/users/2', :class => 'user active')
-    assert_equal result, link_to_principal(user)
-  end
-
-  def test_link_to_principal_should_link_to_group
-    group = Group.find(10)
-    result = link_to('A Team', '/groups/10', :class => 'group')
-    assert_equal result, link_to_principal(group)
-  end
-
-  def test_link_to_principal_should_return_string_representation_for_unknown_type_principal
-    unknown_principal = 'foo'
-    result = unknown_principal.to_s
-    assert_equal result, link_to_principal(unknown_principal, :class => 'bar')
   end
 
   def test_link_to_group_should_return_only_group_name_for_non_admin_users

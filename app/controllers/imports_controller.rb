@@ -50,11 +50,7 @@ class ImportsController < ApplicationController
 
   def settings
     if request.post? && @import.parse_file
-      if @import.total_items == 0
-        flash.now[:error] = l(:error_no_data_in_file)
-      else
-        redirect_to import_mapping_path(@import)
-      end
+      redirect_to import_mapping_path(@import)
     end
 
   rescue CSV::MalformedCSVError, EncodingError => e

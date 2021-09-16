@@ -17,6 +17,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+require 'redmine/sort_criteria'
+
 class QueryColumn
   attr_accessor :name, :totalable, :default_order
   attr_writer   :sortable, :groupable
@@ -237,9 +239,6 @@ class Query < ActiveRecord::Base
   class StatementInvalid < ::ActiveRecord::StatementInvalid
   end
 
-  class QueryError < StandardError
-  end
-
   include Redmine::SubclassFactory
 
   VISIBILITY_PRIVATE = 0
@@ -339,12 +338,6 @@ class Query < ActiveRecord::Base
   end)
 
   scope :sorted, lambda {order(:name, :id)}
-
-  # to be implemented in subclasses that have a way to determine a default
-  # query for the given options
-  def self.default(**_)
-    nil
-  end
 
   # Scope of visible queries, can be used from subclasses only.
   # Unlike other visible scopes, a class methods is used as it
@@ -1150,7 +1143,7 @@ class Query < ActiveRecord::Base
       assoc = $1
       customized_key = "#{assoc}_id"
       customized_class = queried_class.reflect_on_association(assoc.to_sym).klass.base_class rescue nil
-      raise QueryError, "Unknown #{queried_class.name} association #{assoc}" unless customized_class
+      raise "Unknown #{queried_class.name} association #{assoc}" unless customized_class
     end
     where = sql_for_field(field, operator, value, db_table, db_field, true)
     if /[<>]/.match?(operator)
@@ -1427,7 +1420,7 @@ class Query < ActiveRecord::Base
     when "$"
       sql = sql_contains("#{db_table}.#{db_field}", value.first, :ends_with => true)
     else
-      raise QueryError, "Unknown query operator #{operator}"
+      raise "Unknown query operator #{operator}"
     end
 
     return sql

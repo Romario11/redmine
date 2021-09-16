@@ -202,7 +202,7 @@ module Redmine
         page = nil
         if args.size > 0
           page = Wiki.find_page(args.first.to_s, :project => @project)
-        elsif obj.is_a?(WikiContent) || obj.is_a?(WikiContentVersion)
+        elsif obj.is_a?(WikiContent) || obj.is_a?(WikiContent::Version)
           page = obj.page
         else
           raise t(:error_childpages_macro_no_argument)

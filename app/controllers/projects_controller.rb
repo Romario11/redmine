@@ -26,13 +26,11 @@ class ProjectsController < ApplicationController
                 :except => [:index, :autocomplete, :list, :new, :create, :copy]
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
-                            :archive, :unarchive,
-                            :destroy
-                          ]
+                            :archive, :unarchive]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive]
   accept_rss_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen
+  accept_api_auth :index, :show, :create, :update, :destroy
   require_sudo_mode :destroy
 
   helper :custom_fields
@@ -174,26 +172,26 @@ class ProjectsController < ApplicationController
       return
     end
 
+    @principals_by_role = @project.principals_by_role
+    @subprojects = @project.children.visible.to_a
+    @news = @project.news.limit(5).includes(:author, :project).reorder("#{News.table_name}.created_on DESC").to_a
+    with_subprojects = Setting.display_subprojects_issues?
+    @trackers = @project.rolled_up_trackers(with_subprojects).visible
+
+    cond = @project.project_condition(with_subprojects)
+
+    @open_issues_by_tracker = Issue.visible.open.where(cond).group(:tracker).count
+    @total_issues_by_tracker = Issue.visible.where(cond).group(:tracker).count
+
+    if User.current.allowed_to_view_all_time_entries?(@project)
+      @total_hours = TimeEntry.visible.where(cond).sum(:hours).to_f
+      @total_estimated_hours = Issue.visible.where(cond).sum(:estimated_hours).to_f
+    end
+
+    @key = User.current.rss_key
+
     respond_to do |format|
-      format.html do
-        @principals_by_role = @project.principals_by_role
-        @subprojects = @project.children.visible.to_a
-        @news = @project.news.limit(5).includes(:author, :project).reorder("#{News.table_name}.created_on DESC").to_a
-        with_subprojects = Setting.display_subprojects_issues?
-        @trackers = @project.rolled_up_trackers(with_subprojects).visible
-
-        cond = @project.project_condition(with_subprojects)
-
-        @open_issues_by_tracker = Issue.visible.open.where(cond).group(:tracker).count
-        @total_issues_by_tracker = Issue.visible.where(cond).group(:tracker).count
-
-        if User.current.allowed_to_view_all_time_entries?(@project)
-          @total_hours = TimeEntry.visible.where(cond).sum(:hours).to_f
-          @total_estimated_hours = Issue.visible.where(cond).sum(:estimated_hours).to_f
-        end
-
-        @key = User.current.rss_key
-      end
+      format.html
       format.api
     end
   end
@@ -235,31 +233,16 @@ class ProjectsController < ApplicationController
 
   def archive
     unless @project.archive
-      error = l(:error_can_not_archive_project)
+      flash[:error] = l(:error_can_not_archive_project)
     end
-    respond_to do |format|
-      format.html do
-        flash[:error] = error if error
-        redirect_to_referer_or admin_projects_path(:status => params[:status])
-      end
-      format.api do
-        if error
-          render_api_errors error
-        else
-          render_api_ok
-        end
-      end
-    end
+    redirect_to_referer_or admin_projects_path(:status => params[:status])
   end
 
   def unarchive
     unless @project.active?
       @project.unarchive
     end
-    respond_to do |format|
-      format.html{ redirect_to_referer_or admin_projects_path(:status => params[:status]) }
-      format.api{ render_api_ok }
-    end
+    redirect_to_referer_or admin_projects_path(:status => params[:status])
   end
 
   def bookmark
@@ -277,18 +260,12 @@ class ProjectsController < ApplicationController
 
   def close
     @project.close
-    respond_to do |format|
-      format.html { redirect_to project_path(@project) }
-      format.api { render_api_ok }
-    end
+    redirect_to project_path(@project)
   end
 
   def reopen
     @project.reopen
-    respond_to do |format|
-      format.html { redirect_to project_path(@project) }
-      format.api { render_api_ok }
-    end
+    redirect_to project_path(@project)
   end
 
   # Delete @project

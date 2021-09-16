@@ -141,34 +141,6 @@ class Redmine::ApiTest::IssuesTest < Redmine::ApiTest::Base
     assert_select 'issues>issue>is_private', :text => 'false'
   end
 
-  def test_index_should_include_spent_hours
-    Issue.delete_all
-    parent = Issue.generate!(:estimated_hours => 2.0)
-    child = Issue.generate!(:parent_id => parent.id, :estimated_hours => 3.0)
-    TimeEntry.create!(:project => parent.project, :issue => parent, :user => parent.author, :spent_on => parent.author.today,
-                      :hours => '2.5', :comments => '', :activity_id => TimeEntryActivity.first.id)
-    TimeEntry.create!(:project => child.project, :issue => child, :user => child.author, :spent_on => child.author.today,
-                      :hours => '2.5', :comments => '', :activity_id => TimeEntryActivity.first.id)
-
-    get '/issues.xml'
-
-    assert_select 'issues issue', 2
-    assert_select 'issues>issue>spent_hours', '2.5'
-    assert_select 'issues>issue>total_spent_hours', '5.0'
-  end
-
-  def test_index_should_not_include_spent_hours
-    r = Role.anonymous
-    r.permissions.delete(:view_time_entries)
-    r.permissions_will_change!
-    r.save
-
-    get '/issues.xml'
-
-    assert_select 'issues>issue>spent_hours', false
-    assert_select 'issues>issue>total_spent_hours', false
-  end
-
   def test_index_should_allow_timestamp_filtering
     Issue.delete_all
     Issue.generate!(:subject => '1').update_column(:updated_on, Time.parse("2014-01-02T10:25:00Z"))
@@ -419,28 +391,6 @@ class Redmine::ApiTest::IssuesTest < Redmine::ApiTest::Base
     # the user jsmith has no permission to view the associated changeset
     assert_select 'issue changesets[type=array]' do
       assert_select 'changeset', 0
-    end
-  end
-
-  test "GET /issues/:id.xml?include=allowed_statuses should include available statuses" do
-    issue = Issue.find(1)
-    assert_equal 1, issue.tracker_id  # Bug
-    issue.update(:status_id => 2)     # Assigned
-    member = Member.find_or_new(issue.project, User.find_by_login('dlopper'))
-    assert_equal [2], member.role_ids # Developer
-
-    get '/issues/1.xml?include=allowed_statuses', :headers => credentials('dlopper', 'foo')
-    assert_response :ok
-    assert_equal 'application/xml', response.media_type
-
-    allowed_statuses = [[1, 'New'], [2, 'Assigned'], [4, 'Feedback'], [5, 'Closed'], [6, 'Rejected']]
-    assert_select 'issue allowed_statuses[type=array]' do
-      assert_select 'status', allowed_statuses.length
-      assert_select('status').each_with_index do |status, idx|
-        id, name, = allowed_statuses[idx]
-        assert_equal id.to_s, status['id']
-        assert_equal name, status['name']
-      end
     end
   end
 
