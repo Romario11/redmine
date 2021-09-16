@@ -8,7 +8,7 @@ gem 'sprockets', '~> 3.7.2' if RUBY_VERSION < '2.5'
 gem 'globalid', '~> 0.4.2' if Gem.ruby_version < Gem::Version.new('2.6.0')
 gem 'rouge', '~> 3.26.0'
 gem 'request_store', '~> 1.5.0'
-gem "mini_mime", "~> 1.0.1"
+gem "mini_mime", "~> 1.1.1"
 gem "actionpack-xml_parser"
 gem 'roadie-rails', (RUBY_VERSION < '2.5' ? '~> 1.3.0' : '~> 2.2.0')
 gem 'marcel'
