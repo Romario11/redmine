@@ -1,0 +1,8 @@
+production:
+  adapter: postgresql
+  database: redmine
+  host: 172.31.8.239
+  username: redmine
+  password: my_password
+  encoding: utf8
+  schema_search_path: public
